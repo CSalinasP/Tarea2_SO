@@ -30,11 +30,12 @@ void ejecutar(const Configuracion& config) {
     Diagnostico diagnostico;
     std::vector<EstadisticasHebra> stats_lectoras(config.lectores);
     std::vector<EstadisticasHebra> stats_escritoras(config.escritores);
-    // 2. Crear L lectoras y E escritoras con std::thread.
+    // 2. Crear L lectoras y E escritoras con std::thread. 
     std::vector<std::thread> hebras;
-
     hebras.reserve(config.lectores + config.escritores);
-    for (long i = 0; i < config.lectores; ++i) {
+
+    try{
+        for (long i = 0; i < config.lectores; ++i) {
         hebras.emplace_back(
             ejecutar_lectora,
             static_cast<int>(i),
@@ -57,14 +58,24 @@ void ejecutar(const Configuracion& config) {
             std::ref(stats_escritoras[i])
         );
     }
+}
+catch (...) {
+    for (auto& hebra : hebras) {
+        if (hebra.joinable()) {
+            hebra.join();
+        }
+    }
+    throw;
+}
+for (auto& hebra : hebras) {
+    if (hebra.joinable()) {
+        hebra.join();
+    }
+}
     // 3. Asignar id_hebra al comenzar cada hebra.
     // 4. Repetir K operaciones usando entrar_*() y salir_*().
     // 5. Acceder al registro y simular trabajo dentro del intervalo.
     // 6. Hacer join(), incluso si falla la creación de alguna hebra.
     // 7. Comprobar invariantes y verificar la traza.
     // 8. Mostrar tiempos, esperas y resultados.
-
-    throw std::logic_error(
-        "Base preparada: falta implementar sincronizacion y simulacion."
-    );
 }

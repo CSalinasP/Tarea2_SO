@@ -1,23 +1,34 @@
 #include "lectores_escritores.hpp"
 
-#include <stdexcept>
+// Función para registrar la entrada de una hebra lectora en la sección crítica.
+void registrar_entrada_lectora(Diagnostico& diagnostico) {
+    long actuales = diagnostico.lectoras_activas.fetch_add(1, std::memory_order_relaxed) + 1;
+    if (diagnostico.escritoras_activas.load(std::memory_order_relaxed) > 0) {
+        diagnostico.violaciones_exclusion.fetch_add(1, std::memory_order_relaxed);
+    }
 
-void registrar_entrada_lectora(Diagnostico& /* diagnostico */) {
-    // TODO: incrementar lectoras, comprobar exclusión y actualizar máximo.
-    throw std::logic_error("Diagnostico de entrada lectora pendiente.");
+    long prev_max = diagnostico.max_lectoras_simultaneas.load(std::memory_order_relaxed);
+    while (actuales > prev_max &&
+           !diagnostico.max_lectoras_simultaneas.compare_exchange_weak(
+               prev_max, actuales, std::memory_order_relaxed)) {
+    }
 }
 
-void registrar_salida_lectora(Diagnostico& /* diagnostico */) {
-    // TODO: descontar lectora activa.
-    throw std::logic_error("Diagnostico de salida lectora pendiente.");
+// Función para registrar la salida de una hebra lectora de la sección crítica.
+void registrar_salida_lectora(Diagnostico& diagnostico) {
+    diagnostico.lectoras_activas.fetch_sub(1, std::memory_order_relaxed);
 }
 
-void registrar_entrada_escritora(Diagnostico& /* diagnostico */) {
-    // TODO: incrementar escritoras y comprobar exclusión.
-    throw std::logic_error("Diagnostico de entrada escritora pendiente.");
+// Función para registrar la entrada de una hebra escritora en la sección crítica.
+void registrar_entrada_escritora(Diagnostico& diagnostico) {
+    long esc = diagnostico.escritoras_activas.fetch_add(1, std::memory_order_relaxed) + 1;
+    long lec = diagnostico.lectoras_activas.load(std::memory_order_relaxed);
+    if (esc > 1 || lec > 0) {
+        diagnostico.violaciones_exclusion.fetch_add(1, std::memory_order_relaxed);
+    }
 }
 
-void registrar_salida_escritora(Diagnostico& /* diagnostico */) {
-    // TODO: descontar escritora activa.
-    throw std::logic_error("Diagnostico de salida escritora pendiente.");
+// Función para registrar la salida de una hebra escritora de la sección crítica.
+void registrar_salida_escritora(Diagnostico& diagnostico) {
+    diagnostico.escritoras_activas.fetch_sub(1, std::memory_order_relaxed);
 }
