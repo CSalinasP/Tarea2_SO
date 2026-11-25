@@ -26,7 +26,37 @@ void ejecutar(const Configuracion& config) {
 
     // TODO:
     // 1. Crear Registro y contadores atómicos de diagnóstico.
+    Registro registro;
+    Diagnostico diagnostico;
+    std::vector<EstadisticasHebra> stats_lectoras(config.lectores);
+    std::vector<EstadisticasHebra> stats_escritoras(config.escritores);
     // 2. Crear L lectoras y E escritoras con std::thread.
+    std::vector<std::thread> hebras;
+
+    hebras.reserve(config.lectores + config.escritores);
+    for (long i = 0; i < config.lectores; ++i) {
+        hebras.emplace_back(
+            ejecutar_lectora,
+            static_cast<int>(i),
+            std::cref(config),
+            std::ref(*control),
+            std::ref(registro),
+            std::ref(diagnostico),
+            std::ref(stats_lectoras[i])
+        );
+    }
+
+    for (long i = 0; i < config.escritores; ++i) {
+        hebras.emplace_back(
+            ejecutar_escritora,
+            static_cast<int>(config.lectores + i),
+            std::cref(config),
+            std::ref(*control),
+            std::ref(registro),
+            std::ref(diagnostico),
+            std::ref(stats_escritoras[i])
+        );
+    }
     // 3. Asignar id_hebra al comenzar cada hebra.
     // 4. Repetir K operaciones usando entrar_*() y salir_*().
     // 5. Acceder al registro y simular trabajo dentro del intervalo.
